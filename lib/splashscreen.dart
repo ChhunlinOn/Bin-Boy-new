@@ -14,19 +14,26 @@ class Splashscreen extends StatefulWidget {
   State<Splashscreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<Splashscreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<Splashscreen>
+    with SingleTickerProviderStateMixin {
   @override
-  void initState(){
+  void initState() {
     super.initState();
-       Future.delayed(const Duration(seconds: 5), () {
-         Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomePage()));
-       });
-      }
-  @override
-  void dispose(){
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
+    Future.delayed(const Duration(seconds: 5), () {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+    });
   }
+
+  @override
+  void dispose() {
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,22 +41,27 @@ class _SplashScreenState extends State<Splashscreen> with SingleTickerProviderSt
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.blue, Colors.deepPurpleAccent],
-            begin: Alignment.topRight,
-            end: Alignment.topLeft
+            colors: [
+              Color(0xFF127E16), // #127E16
+              Color(0xFF16DD69), // #16DD69
+            ],
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
           ),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(' Splash Screen',style: TextStyle(color: Colors.white, fontSize: 28),),
+            // Text(' Splash Screen',style: TextStyle(color: Colors.white, fontSize: 28),),
+            Image.asset(
+              'assets/images/splash2.png', // Replace with your image path
+              width: 300, // Adjust the width as needed
+              height: 300, // Adjust the height as needed
+            ),
             // style
           ],
         ),
       ),
     );
   }
-
 }
-
-
