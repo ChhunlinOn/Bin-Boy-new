@@ -1,6 +1,7 @@
 // import 'package:boybin/pages/Home.dart';
 // import 'package:boybinnew/pages/home.dart';
-import 'package:boybin/pages/home.dart';
+import 'package:boybin/auth/login.dart';
+// import 'package:boybin/pages/home.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // import 'package:animated_splash_screen/animated_splash_screen.dart';
@@ -22,7 +23,7 @@ class _SplashScreenState extends State<Splashscreen>
     Future.delayed(const Duration(seconds: 5), () {
       Navigator.of(
         context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
     });
   }
 
