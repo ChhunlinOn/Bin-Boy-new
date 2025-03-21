@@ -1,26 +1,11 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Login App',
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        fontFamily: 'Roboto',
-      ),
-      home: const LoginScreen(),
-    );
-  }
-}
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:boybin/pages/home.dart';
+import 'package:boybin/auth/auth_service.dart';
+import 'package:boybin/auth/register.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -33,26 +18,95 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
-  void _handleLogin() {
-    // Add your login logic here
-    final email = _emailController.text;
-    final password = _passwordController.text;
-    
-    print('Login attempt with: $email / $password');
-    // Implement your authentication logic here
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
   }
 
-  void _handleForgotPassword() {
-    // Add your forgot password logic here
-    print('Forgot password tapped');
-    // You could navigate to a password reset screen or show a dialog
+  // Check if the user is already logged in
+  Future<void> _checkLoginStatus() async {
+    final isLoggedIn = await AuthService.isLoggedIn();
+    if (isLoggedIn) {
+      // Navigate to the home screen if the user is already logged in
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    }
   }
 
-  void _handleCreateAccount() {
-    // Add your account creation navigation here
-    print('Create account tapped');
-    // You could navigate to a registration screen
+  // Handle login logic
+  void _handleLogin() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // Example API endpoint
+    const String apiUrl = "https://pay1.jetdev.life/api/account/login";
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': email, 'password': password}),
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (response.statusCode == 200) {
+        // Parse response data
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+        // Create user data object
+        final userData = UserData(
+          userName: responseData['userName'] ?? '',
+          email: responseData['email'] ?? '',
+          profileImageUrl: responseData['profileImageUrl'] ?? '',
+          token: responseData['token'] ?? '',
+        );
+
+        // Save user data
+        await AuthService.saveUserData(userData);
+
+        // Save login state
+        await _saveLoginState();
+
+        // Navigate to the home screen on successful login
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      } else {
+        // Show an error message if login fails
+        final errorMessage = jsonDecode(response.body)['message'] ?? 'Login failed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      print('Error occurred: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An error occurred. Please try again.')),
+      );
+    }
+  }
+
+  // Save login state to shared preferences
+  Future<void> _saveLoginState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', true);
   }
 
   @override
@@ -100,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Log In! text
                     const Text(
                       'Log In!',
@@ -111,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // Sign in to your account text
                     const Text(
                       'Sign In to your account',
@@ -121,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    
+
                     // Email field
                     Container(
                       decoration: BoxDecoration(
@@ -143,7 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Password field
                     Container(
                       decoration: BoxDecoration(
@@ -176,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Forgot password
                     Align(
                       alignment: Alignment.center,
@@ -193,17 +247,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                 decoration: TextDecoration.underline,
                               ),
                               recognizer: TapGestureRecognizer()
-                                ..onTap = _handleForgotPassword,
+                                ..onTap = () {
+                                  print('Forgot password tapped');
+                                },
                             ),
                           ],
                         ),
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Login button
                     ElevatedButton(
-                      onPressed: _handleLogin,
+                      onPressed: _isLoading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.green,
@@ -212,20 +268,29 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(30),
                         ),
                       ),
-                      child: const Text(
-                        'Log In',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                              ),
+                            )
+                          : const Text(
+                              'Log In',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Don't have an account
                     RichText(
                       text: TextSpan(
-                        text: 'Don\'t have an account?',
+                        text: 'Don\'t have an account? ',
                         style: const TextStyle(color: Colors.white, fontSize: 14),
                         children: [
                           TextSpan(
@@ -236,7 +301,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
-                              ..onTap = _handleCreateAccount,
+                              ..onTap = () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                                );
+                              },
                           ),
                         ],
                       ),
