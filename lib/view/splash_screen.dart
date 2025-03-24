@@ -1,12 +1,10 @@
-// import 'package:boybin/pages/Home.dart';
-// import 'package:boybinnew/pages/home.dart';
-import 'package:boybin/auth/login.dart';
-// import 'package:boybin/pages/home.dart';
+import 'package:boybin/bloc/user_bloc.dart';
+import 'package:boybin/controllers/auth_controller.dart';
+import 'package:boybin/view/home_screen.dart';
+import 'package:boybin/view/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// import 'package:animated_splash_screen/animated_splash_screen.dart';
-// Removed duplicate import as 'package:boybin/pages/Home.dart' already exists
-// import 'package:page_transition/page_transition.dart'; // Import for PageTransitionType
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class Splashscreen extends StatefulWidget {
   const Splashscreen({super.key});
@@ -17,14 +15,43 @@ class Splashscreen extends StatefulWidget {
 
 class _SplashScreenState extends State<Splashscreen>
     with SingleTickerProviderStateMixin {
+  final AuthController _authController = AuthController();
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 5), () {
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
-    });
+    _checkAuthAndNavigate();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    // Check if user is logged in
+    final isLoggedIn = await _authController.isLoggedIn();
+    
+    if (isLoggedIn) {
+      // Get user data
+      final user = await _authController.getCurrentUser();
+      
+      if (user != null) {
+        // Update the BLoC with the user data
+        context.read<UserBloc>().add(SetUserEvent(user));
+      }
+    }
+    
+    // Wait for 5 seconds
+    await Future.delayed(const Duration(seconds: 5));
+    
+    // Navigate to appropriate screen
+    if (mounted) {
+      if (isLoggedIn) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    }
   }
 
   @override
@@ -33,6 +60,7 @@ class _SplashScreenState extends State<Splashscreen>
       SystemUiMode.manual,
       overlays: SystemUiOverlay.values,
     );
+    super.dispose();
   }
 
   @override
@@ -53,13 +81,11 @@ class _SplashScreenState extends State<Splashscreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Text(' Splash Screen',style: TextStyle(color: Colors.white, fontSize: 28),),
             Image.asset(
               'assets/images/splash2.png', // Replace with your image path
               width: 300, // Adjust the width as needed
               height: 300, // Adjust the height as needed
             ),
-            // style
           ],
         ),
       ),

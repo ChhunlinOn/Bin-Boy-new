@@ -1,10 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:boybin/pages/home.dart';
-import 'package:boybin/auth/auth_service.dart';
-import 'package:boybin/auth/login.dart';
+import 'package:boybin/bloc/user_bloc.dart';
+import 'package:boybin/controllers/auth_controller.dart';
+import 'package:boybin/view/home_screen.dart';
+import 'package:boybin/view/login_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -22,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  final AuthController _authController = AuthController();
 
   void _handleRegister() async {
     setState(() {
@@ -46,72 +47,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // Example API endpoint for registration
-    const String apiUrl = "https://pay1.jetdev.life/api/account/register";
-
     try {
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'email': email,
-          'password': password,
-          'profileImageUrl': imageUrl,
-        }),
-      );
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // Parse response data
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        
-        // Create user data object
-        final userData = UserData(
-          userName: responseData['userName'] ?? '',
-          email: responseData['email'] ?? '',
-          profileImageUrl: responseData['profileImageUrl'] ?? '',
-          token: responseData['token'] ?? '',
-        );
-        
-        // Save user data
-        await AuthService.saveUserData(userData);
-        
-        // Navigate to the home screen on successful registration
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
-      } else {
-        // Show an error message if registration fails
-        print('Registration failed: ${response.body}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration failed: ${response.body}')),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      final user = await _authController.register(username, email, password, imageUrl);
       
+      // Update the BLoC with the user data
+      context.read<UserBloc>().add(SetUserEvent(user));
+      
+      // Navigate to the home screen on successful registration
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    } catch (e) {
       print('Error occurred: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('An error occurred. Please try again.')),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
-  }
-
-  void _handleLogin() {
-    // Navigate to login screen
-    print('Login tapped');
-    // Using pushReplacement to replace the current screen with the login screen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-    );
   }
 
   @override
@@ -126,6 +82,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Rest of the build method remains the same
     return Scaffold(
       body: Container(
         // Green gradient background
@@ -358,7 +315,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
-                              ..onTap = _handleLogin,
+                              ..onTap = () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                );
+                              },
                           ),
                         ],
                       ),

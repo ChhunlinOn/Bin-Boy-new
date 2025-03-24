@@ -1,11 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:boybin/pages/home.dart';
-import 'package:boybin/auth/auth_service.dart';
-import 'package:boybin/auth/register.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:boybin/bloc/user_bloc.dart';
+import 'package:boybin/controllers/auth_controller.dart';
+import 'package:boybin/view/home_screen.dart';
+import 'package:boybin/view/register_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -19,24 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkLoginStatus();
-  }
-
-  // Check if the user is already logged in
-  Future<void> _checkLoginStatus() async {
-    final isLoggedIn = await AuthService.isLoggedIn();
-    if (isLoggedIn) {
-      // Navigate to the home screen if the user is already logged in
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
-    }
-  }
+  final AuthController _authController = AuthController();
 
   // Handle login logic
   void _handleLogin() async {
@@ -47,66 +29,27 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    // Example API endpoint
-    const String apiUrl = "https://pay1.jetdev.life/api/account/login";
-
     try {
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': email, 'password': password}),
+      final user = await _authController.login(email, password);
+      
+      // Update the BLoC with the user data
+      context.read<UserBloc>().add(SetUserEvent(user));
+      
+      // Navigate to the home screen on successful login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
       );
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (response.statusCode == 200) {
-        // Parse response data
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-
-        // Create user data object
-        final userData = UserData(
-          userName: responseData['userName'] ?? '',
-          email: responseData['email'] ?? '',
-          profileImageUrl: responseData['profileImageUrl'] ?? '',
-          token: responseData['token'] ?? '',
-        );
-
-        // Save user data
-        await AuthService.saveUserData(userData);
-
-        // Save login state
-        await _saveLoginState();
-
-        // Navigate to the home screen on successful login
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
-      } else {
-        // Show an error message if login fails
-        final errorMessage = jsonDecode(response.body)['message'] ?? 'Login failed';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
-      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-
       print('Error occurred: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('An error occurred. Please try again.')),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
-  }
-
-  // Save login state to shared preferences
-  Future<void> _saveLoginState() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', true);
   }
 
   @override
@@ -118,6 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Rest of the build method remains the same
     return Scaffold(
       body: Container(
         // Green gradient background
