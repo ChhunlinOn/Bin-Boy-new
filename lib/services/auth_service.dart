@@ -104,6 +104,24 @@ class AuthService {
     }
 
     final response = await http.get(
+      Uri.parse('$baseUrl/account/activity'),
+      headers: {'Authorization': 'Bearer $token'}, // Use token
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => Activity.fromJson(json)).toList();
+    }
+    return [];
+    }
+
+    Future<List<Activity>> fetchlimitActivities({int limit = 3}) async {
+    final token = await _storageService.getToken(); // Retrieve token
+    if (token == null) {
+      throw Exception('Token not found');
+    }
+
+    final response = await http.get(
       Uri.parse('$baseUrl/account/activity?limit=$limit'),
       headers: {'Authorization': 'Bearer $token'}, // Use token
     );

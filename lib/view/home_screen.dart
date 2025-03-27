@@ -1,4 +1,7 @@
 import 'package:boybin/view/activity_screen.dart';
+import 'package:boybin/models/activity_model.dart'; // Ensure Activity is imported
+import 'package:boybin/controllers/activity_controller.dart'; // Import ActivityController
+import 'package:boybin/view/profilescreen.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter_svg/flutter_svg.dart';
 import 'package:boybin/bloc/user_bloc.dart';
@@ -19,6 +22,16 @@ class _HomePageState extends State<HomePage> {
   final AuthController _authController = AuthController();
   int _selectedIndex = 0;
 
+  final ActivityController _activityController = ActivityController();
+  late Future<List<Activity>> _activities;
+
+  @override
+  void initState() {
+    super.initState();
+    _activities = _activityController.fetchActivities();
+  }
+  
+
   // Logout function
   Future<void> _logout(BuildContext context) async {
     await _authController.logout();
@@ -34,10 +47,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  setState(() {
+    _selectedIndex = index;
+  });
+
+  // if (index == 3) { // Assuming 'Profile' is at index 3
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(builder: (context) => ProfileSettingsScreen()),
+  //   );
+  // }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -91,10 +111,7 @@ class _HomePageState extends State<HomePage> {
               icon: const Icon(Icons.notifications_outlined, color: Colors.green),
               onPressed: () {
                 // Handle notification tap
-                Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => ActivityScreen()),
-    );
+               
               },
             ),
           ],
@@ -272,6 +289,10 @@ class _HomePageState extends State<HomePage> {
                   TextButton(
                     onPressed: () {
                       // Handle see all tap
+                       Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ActivityScreen()),
+    );
                     },
                     child: const Text(
                       'See All',
@@ -286,9 +307,30 @@ class _HomePageState extends State<HomePage> {
             ),
             
             // Activity list
-            _buildActivityItem('Bottle Collection', '0.5 kg', '+7 points', '2 hours ago'),
-            _buildActivityItem('Bottle Collection', '3.5 kg', '+7 points', '2 hours ago'),
-            _buildActivityItem('Bottle Collection', '0.5 kg', '+7 points', '2 hours ago'),
+            FutureBuilder<List<Activity>>(
+  future: _activityController.fetchActivities(), // Fetch activities
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Center(child: CircularProgressIndicator());
+    } else if (snapshot.hasError) {
+      return Center(child: Text('Error: ${snapshot.error}'));
+    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+      return const Center(child: Text('No activities found'));
+    } else {
+      // Display the fetched activities
+      return Column(
+        children: snapshot.data!.map((activity) {
+          return _buildActivityItem(
+            activity.title,
+            '${activity.estimateWeight} kg', // Example: Display weight
+            activity.points, // Example: Display points
+            _formatTime(activity.date), // Format time
+          );
+        }).toList(),
+      );
+    }
+  },
+),
           ],
         ),
       ),
@@ -315,6 +357,7 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
+
           ),
         ],
       ),
@@ -360,17 +403,17 @@ class _HomePageState extends State<HomePage> {
   Widget _buildActivityItem(String title, String subtitle, String points, String time) {
     return Container(
       decoration: BoxDecoration(
-  color: Colors.white,
-  borderRadius: BorderRadius.circular(12),
-  boxShadow: [
-    BoxShadow(
-      color: Colors.grey.withOpacity(0.15),
-      spreadRadius: 1,
-      blurRadius: 8,
-      offset: const Offset(0, 3),
-    ),
-  ],
-),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.15),
+            spreadRadius: 1,
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       margin: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -431,5 +474,16 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  String _formatTime(DateTime date) {
+    final duration = DateTime.now().difference(date);
+    if (duration.inMinutes < 60) {
+      return '${duration.inMinutes} minutes ago';
+    } else if (duration.inHours < 24) {
+      return '${duration.inHours} hours ago';
+    } else {
+      return '${duration.inDays} days ago';
+    }
   }
 }

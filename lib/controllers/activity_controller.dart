@@ -7,4 +7,7 @@ class ActivityController {
   Future<List<Activity>> fetchActivities() {
     return _authService.fetchActivities();
   }
+  Future<List<Activity>> fetchlimmitActivities() {
+    return _authService.fetchlimitActivities();
+  }
 }

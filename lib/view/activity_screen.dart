@@ -20,7 +20,15 @@ class _ActivityScreenState extends State<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Activity'), backgroundColor: Colors.green,),
+      appBar: AppBar(
+  title: const Text('Activity', style: TextStyle(color: Colors.green, fontWeight: FontWeight.normal),),
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.green), // Green back arrow
+    onPressed: () {
+      Navigator.pop(context); // Navigate back to the previous screen
+    },
+  ),
+),
       body: FutureBuilder<List<Activity>>(
         future: _activities,
         builder: (context, snapshot) {
